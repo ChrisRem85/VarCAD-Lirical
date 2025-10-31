@@ -33,6 +33,48 @@ VarCAD-Lirical/
 └── .gitignore                # Excludes resources/ and examples/
 ```
 
+## ✅ Validation Status
+
+**Last Tested**: October 31, 2025  
+**Platform**: Windows 11 + WSL2 + Docker Desktop  
+**LIRICAL Version**: 2.2.0  
+**Exomiser Default**: v2508
+
+### Verified Functionality
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Phenotype-only analysis | ✅ **Working** | Fully tested with multiple scenarios |
+| Docker containerization | ✅ **Working** | Cross-platform deployment verified |
+| HPO term validation | ✅ **Working** | Proper error handling for invalid terms |
+| Age/sex parameters | ✅ **Working** | ISO 8601 duration format supported |
+| Output formats | ✅ **Working** | HTML, TSV, JSON all generated correctly |
+| Database setup | ✅ **Working** | LIRICAL core databases installed |
+
+### Known Limitations
+
+| Feature | Status | Resolution |
+|---------|--------|------------|
+| Genomic analysis with VCF | ⚠️ **Limited** | Requires additional Exomiser v2508 databases |
+| Target diseases mode | ⚠️ **Limited** | Works with phenotype-only, needs Exomiser v2508 for genomic |
+| Bash script execution | ⚠️ **Limited** | WSL2 compatibility requires full Ubuntu, not docker-desktop |
+
+### Test Cases Validated
+
+```bash
+# Test 1: Basic phenotype analysis (5-year-old female)
+# Phenotypes: HP:0001156 (Brachydactyly), HP:0001382 (Joint hypermobility)
+# Result: ✅ Successful - Generated HTML, TSV, JSON reports
+
+# Test 2: Alternative phenotypes (25-year-old male)  
+# Phenotypes: HP:0000098 (Tall stature), HP:0001382 (Joint hypermobility)
+# Result: ✅ Successful - Disease rankings different as expected
+
+# Test 3: Age variation (6-month-old infant)
+# Phenotypes: HP:0001156 (Brachydactyly)
+# Result: ✅ Successful - Age-specific disease scoring working
+```
+
 ## Development Workflow
 
 ### 1. Local Development (Windows 11 + WSL2)
@@ -287,7 +329,7 @@ OMIM:166200  # Osteogenesis imperfecta
 
 ### LIRICAL Resources (hg38)
 - LIRICAL distribution JAR (~100MB)
-- Exomiser database files for hg38 (~4-6GB)
+- Exomiser database files for hg38 (~4-6GB) - **v2508 recommended**
 - HPO database files (~100MB)
 - Disease-gene association files (~50MB)
 

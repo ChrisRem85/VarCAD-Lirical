@@ -126,6 +126,7 @@ run_container() {
         -v "$inputs_dir:/app/examples/inputs"
         -v "$outputs_dir:/app/examples/outputs"
         "$IMAGE_NAME:$IMAGE_TAG"
+        java -jar /opt/lirical/lirical-cli-2.2.0.jar
     )
     
     # Add user arguments

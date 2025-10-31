@@ -15,6 +15,9 @@ EXAMPLES_DIR="$APP_DIR/examples"
 LIRICAL_LATEST_RELEASE="v2.2.0"
 LIRICAL_DOWNLOAD_URL="https://github.com/TheJacksonLaboratory/LIRICAL/releases/download"
 
+# Exomiser configuration - default to latest recommended version
+EXOMISER_DATA_VERSION="${EXOMISER_DATA_VERSION:-2508}"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -50,7 +53,7 @@ Commands:
     all           Complete setup (download LIRICAL, setup directories, download databases)
     download      Download LIRICAL distribution
     directories   Create required directories
-    databases     Download LIRICAL databases
+    databases     Download LIRICAL databases (Exomiser v2508 compatible)
     examples      Create example files
     docker        Build Docker image
     help          Show this help message
@@ -58,6 +61,9 @@ Commands:
 Options:
     --version VER    LIRICAL version to download (default: $LIRICAL_LATEST_RELEASE)
     --force          Force overwrite existing files
+
+Environment Variables:
+    EXOMISER_DATA_VERSION    Exomiser data release version (default: 2508)
 
 Examples:
     $0 all

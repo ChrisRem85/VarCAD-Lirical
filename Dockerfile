@@ -46,9 +46,13 @@ COPY resources/ /app/resources/
 # Setup LIRICAL
 RUN if [ -f /app/resources/lirical-cli-*-distribution.zip ]; then \
         cd /app/resources && \
-        unzip -q lirical-cli-*-distribution.zip && \
-        mv lirical-cli-*/* $LIRICAL_HOME/ && \
-        chmod +x $LIRICAL_HOME/bin/lirical.sh; \
+        unzip -o -q lirical-cli-*-distribution.zip && \
+        cp -r lirical-cli-*/* $LIRICAL_HOME/ && \
+        echo "LIRICAL installed from ZIP distribution"; \
+    elif [ -d /app/resources/lirical-cli-* ]; then \
+        cd /app/resources && \
+        cp -r lirical-cli-*/* $LIRICAL_HOME/ && \
+        echo "LIRICAL installed from extracted directory"; \
     else \
         echo "WARNING: LIRICAL distribution not found in resources/"; \
     fi

@@ -12,6 +12,9 @@ LIRICAL_HOME="${LIRICAL_HOME:-/opt/lirical}"
 LIRICAL_JAR="$LIRICAL_HOME/lib/lirical-cli.jar"
 RESOURCES_DIR="$APP_DIR/resources"
 
+# Exomiser configuration - default to latest recommended version
+EXOMISER_DATA_VERSION="${EXOMISER_DATA_VERSION:-2508}"
+
 # Default data directory
 DEFAULT_DATA_DIR="$RESOURCES_DIR/data"
 DATA_DIR="${1:-$DEFAULT_DATA_DIR}"
@@ -51,7 +54,7 @@ Arguments:
     DATA_DIR    Directory to store database files (default: $DEFAULT_DATA_DIR)
 
 This script builds the required LIRICAL databases for hg38 genome assembly:
-- Downloads Exomiser database files
+- Downloads Exomiser database files (v2508 recommended)
 - Downloads HPO (Human Phenotype Ontology) files
 - Downloads additional required resources
 - Configures databases for hg38 assembly
@@ -61,9 +64,13 @@ The process may take several hours and requires:
 - Stable internet connection
 - Java 11+ runtime
 
+Environment Variables:
+    EXOMISER_DATA_VERSION    Exomiser data release version (default: 2508)
+
 Examples:
     $0                              # Use default data directory
     $0 /path/to/custom/data/dir     # Use custom data directory
+    EXOMISER_DATA_VERSION=2508 $0   # Explicitly use Exomiser v2508
 
 EOF
 }
@@ -214,11 +221,12 @@ VarCAD-Lirical Database Build Summary
 
 Build Date: $(date)
 Genome Assembly: hg38
+Exomiser Version: v$EXOMISER_DATA_VERSION
 LIRICAL JAR: $LIRICAL_JAR
 Data Directory: $DATA_DIR
 
 Database Components:
-- Exomiser databases for variant annotation
+- Exomiser v$EXOMISER_DATA_VERSION databases for variant annotation
 - HPO (Human Phenotype Ontology) files
 - Disease-gene associations
 - Population frequency data

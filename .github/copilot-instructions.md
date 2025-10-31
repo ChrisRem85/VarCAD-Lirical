@@ -70,6 +70,7 @@ VarCAD-Lirical is a containerized wrapper for [LIRICAL](https://github.com/TheJa
 - Use `./scripts/build_databases.sh` to build databases locally
 - Use `./scripts/run_lirical.sh download` for pre-built databases
 - Resources directory structure: `resources/data/` for databases, `resources/lirical-cli-X.X.X-distribution.zip`
+- Exomiser data release 2508 is the current default for genomic analysis
 - Never commit resources to git (large files, gitignored)
 
 ## LIRICAL Integration Points

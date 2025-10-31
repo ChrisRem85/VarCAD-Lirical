@@ -10,6 +10,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(dirname "$SCRIPT_DIR")"
 LIRICAL_HOME="${LIRICAL_HOME:-/opt/lirical}"
 LIRICAL_JAR="$LIRICAL_HOME/lib/lirical-cli.jar"
+
+# Exomiser configuration - default to latest recommended version
+EXOMISER_DATA_VERSION="${EXOMISER_DATA_VERSION:-2508}"
+
+# Check if LIRICAL JAR exists in the expected location, if not, try the resources directory
+if [[ ! -f "$LIRICAL_JAR" ]]; then
+    # Try the resources directory structure
+    LIRICAL_DIR=$(find "$APP_DIR/resources" -name "lirical-cli-*" -type d | head -n1)
+    if [[ -n "$LIRICAL_DIR" ]]; then
+        LIRICAL_JAR=$(find "$LIRICAL_DIR" -name "lirical-cli-*.jar" -type f | head -n1)
+    fi
+fi
+
 RESOURCES_DIR="$APP_DIR/resources"
 INPUTS_DIR="$APP_DIR/examples/inputs"
 OUTPUTS_DIR="$APP_DIR/examples/outputs"
@@ -154,22 +167,20 @@ run_prioritize_analysis() {
     # Build LIRICAL command
     local cmd=(java -jar "$LIRICAL_JAR")
     cmd+=(prioritize)
-    cmd+=(--exomiser-data-directory "$data_dir")
-    cmd+=(--output-directory "$output_path")
-    cmd+=(--assembly "$assembly")
+    cmd+=(-d "$data_dir")
+    cmd+=(-o "$output_path")
+    cmd+=(-f html)
+    cmd+=(-f tsv)
+    cmd+=(-f json)
     
     # Add observed phenotypes
-    IFS=',' read -ra OBS_TERMS <<< "$observed_phenotypes"
-    for term in "${OBS_TERMS[@]}"; do
-        cmd+=(--observed-phenotypes "$term")
-    done
+    if [[ -n "$observed_phenotypes" ]]; then
+        cmd+=(-p "$observed_phenotypes")
+    fi
     
     # Add negated phenotypes if provided
     if [[ -n "$negated_phenotypes" ]]; then
-        IFS=',' read -ra NEG_TERMS <<< "$negated_phenotypes"
-        for term in "${NEG_TERMS[@]}"; do
-            cmd+=(--negated-phenotypes "$term")
-        done
+        cmd+=(-n "$negated_phenotypes")
     fi
     
     # Add age if provided
@@ -194,7 +205,7 @@ run_prioritize_analysis() {
     
     # Add analysis name prefix
     if [[ -n "$analysis_name" ]]; then
-        cmd+=(--output-prefix "$analysis_name")
+        cmd+=(--sample-id "$analysis_name")
     fi
     
     log_info "Running LIRICAL prioritize analysis..."
@@ -295,7 +306,7 @@ run_target_diseases_analysis() {
     
     # Add analysis name prefix
     if [[ -n "$analysis_name" ]]; then
-        cmd+=(--output-prefix "$analysis_name")
+        cmd+=(--sample-id "$analysis_name")
     fi
     
     log_info "Running LIRICAL target diseases analysis..."
