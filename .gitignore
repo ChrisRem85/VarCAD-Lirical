@@ -1,0 +1,24 @@
+# VarCAD-Lirical specific ignores
+
+# Resources folder containing LIRICAL dependencies and database files
+resources/
+
+# Examples folder containing test inputs and outputs
+examples/
+
+# Docker build artifacts
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.temp
