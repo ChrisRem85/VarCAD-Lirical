@@ -73,7 +73,25 @@ VarCAD-Lirical/
 # Test 3: Age variation (6-month-old infant)
 # Phenotypes: HP:0001156 (Brachydactyly)
 # Result: ✅ Successful - Age-specific disease scoring working
+
+# Test 4: LDS2 Official Example (complex multi-system case)
+# Patient: 9-year-old female with connective tissue disorder
+# Phenotypes: 13 complex features including aortic regurgitation, arachnodactyly, scoliosis
+# Result: ✅ Successful - Demonstrates complex differential diagnosis capability
 ```
+
+### LDS2 Example Integration
+
+The project now includes the official LIRICAL developer example (LDS2 - Patient 4), demonstrating:
+- **Complex Phenotype Analysis**: 13 distinct HPO terms covering cardiovascular and skeletal features
+- **Connective Tissue Disorders**: Phenotype consistent with Loeys-Dietz syndrome
+- **Multi-format Support**: YAML, JSON (Phenopacket v2.0), and VCF formats
+- **Real Genomic Data**: ~4MB compressed VCF file with actual variant calls
+
+**Available Files:**
+- `examples/inputs/LDS2.yaml` - YAML configuration format
+- `examples/inputs/LDS2.v2.json` - GA4GH Phenopacket v2.0 format  
+- `examples/inputs/LDS2.vcf.gz` - Genomic variants for Patient 4
 
 ## Development Workflow
 
@@ -159,6 +177,18 @@ chmod +x scripts/*.sh
   --sex FEMALE \
   -o dev_test \
   -n dev_analysis
+
+# Test official LDS2 example (complex case)
+docker run --rm \
+  -v "${PWD}/examples/inputs:/app/examples/inputs" \
+  -v "${PWD}/examples/outputs:/app/examples/outputs" \
+  varcad-lirical \
+  java -jar /opt/lirical/lirical-cli-2.2.0.jar prioritize \
+  -d /app/resources/data \
+  -o /app/examples/outputs/LDS2_quickstart \
+  -f html -f tsv -f json \
+  -p HP:0001659,HP:0001166,HP:0000193,HP:0002650,HP:0000768 \
+  --age P9Y --sex FEMALE --sample-id LDS2_Patient4
 
 # Test Docker build (uses Linux containers)
 ./scripts/docker_helper.sh build
