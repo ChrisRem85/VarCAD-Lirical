@@ -228,14 +228,32 @@ download_databases() {
     local data_dir="$RESOURCES_DIR/data"
     mkdir -p "$data_dir"
     
-    log_info "Downloading databases to: $data_dir"
+    log_info "Downloading LIRICAL core databases to: $data_dir"
     
     if java -jar "$lirical_jar" download -d "$data_dir"; then
-        log_success "Database download completed successfully"
+        log_success "LIRICAL core database download completed successfully"
     else
-        log_error "Database download failed"
+        log_error "LIRICAL core database download failed"
         exit 1
     fi
+    
+    # Information about Exomiser databases  
+    echo
+    log_info "=== Exomiser Database Setup Required ==="
+    log_warn "For genomic analysis with VCF files, you need Exomiser databases."
+    log_info "Recommended: Exomiser v$EXOMISER_DATA_VERSION or newer (compatible with Exomiser 14.0.0+)"
+    echo
+    log_info "Manual download instructions:"
+    log_info "1. Visit: https://github.com/exomiser/Exomiser/discussions/categories/data-release"
+    log_info "2. Download: ${EXOMISER_DATA_VERSION}_hg38.zip (for hg38 assembly)"
+    log_info "3. Extract to: $data_dir/ (alongside LIRICAL data files)"
+    log_info "4. Required files:"
+    log_info "   - ${EXOMISER_DATA_VERSION}_hg38_variants.mv.db"
+    log_info "   - ${EXOMISER_DATA_VERSION}_hg38_clinvar.mv.db"
+    echo
+    log_info "Automated helper available: ./scripts/download_exomiser.sh"
+    log_info "Alternative: Use phenotype-only analysis (no VCF required - fully supported)"
+    echo
 }
 
 # Function to create example files

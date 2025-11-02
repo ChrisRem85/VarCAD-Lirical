@@ -55,7 +55,7 @@ VarCAD-Lirical/
 
 | Feature | Status | Resolution |
 |---------|--------|------------|
-| Genomic analysis with VCF | ⚠️ **Limited** | Requires additional Exomiser v2508 databases |
+| Genomic analysis with VCF | ⚠️ **Limited** | Requires additional Exomiser v2508 databases - use `./scripts/download_exomiser.sh` |
 | Target diseases mode | ⚠️ **Limited** | Works with phenotype-only, needs Exomiser v2508 for genomic |
 | Bash script execution | ⚠️ **Limited** | WSL2 compatibility requires full Ubuntu, not docker-desktop |
 
@@ -168,7 +168,17 @@ chmod +x scripts/*.sh
 ./scripts/setup.sh all
 ```
 
-#### 2. Development Testing
+#### 3. Optional: Exomiser Database Setup (for VCF analysis)
+```bash
+# Download Exomiser v2508 databases for genomic analysis
+./scripts/download_exomiser.sh
+
+# Or manually download from:
+# https://github.com/exomiser/Exomiser/discussions/categories/data-release
+# Extract 2508_hg38.zip to resources/data/
+```
+
+#### 4. Development Testing
 ```bash
 # Test with example data
 ./scripts/run_lirical.sh prioritize \
@@ -195,6 +205,7 @@ docker run --rm \
 ./scripts/docker_helper.sh run prioritize \
   --observed HP:0001156 \
   -o docker_test \
+  -n docker_analysis
   -n docker_analysis
 ```
 
