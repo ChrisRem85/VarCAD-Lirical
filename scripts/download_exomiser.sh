@@ -12,7 +12,7 @@ RESOURCES_DIR="$APP_DIR/resources"
 
 # Exomiser configuration
 EXOMISER_DATA_VERSION="${EXOMISER_DATA_VERSION:-2508}"
-EXOMISER_BASE_URL="https://github.com/exomiser/Exomiser/releases/download"
+EXOMISER_BASE_URL="https://g-879a9f.f5dc97.75bc.dn.glob.us/data"
 
 # Colors for output
 RED='\033[0;31m'
@@ -56,7 +56,7 @@ This script helps download Exomiser databases required for genomic analysis.
 Requirements:
     - wget or curl for downloading
     - unzip for extraction
-    - ~4-6GB free disk space
+    - ~25GB free disk space for hg38 databases (22GB) + extraction
 
 Examples:
     $0                              # Download hg38 databases for v$EXOMISER_DATA_VERSION
@@ -109,11 +109,11 @@ download_exomiser_databases() {
     mkdir -p "$data_dir"
     
     local filename="${version}_${assembly}.zip"
-    local download_url="$EXOMISER_BASE_URL/v${version}/$filename"
+    local download_url="$EXOMISER_BASE_URL/$filename"
     local target_file="$data_dir/$filename"
     
     log_info "Download URL: $download_url"
-    log_warn "This download is ~4-6GB and may take significant time"
+    log_warn "This download is ~22GB and may take significant time"
     
     # Try to download
     if command -v wget &> /dev/null; then
@@ -162,13 +162,21 @@ show_manual_instructions() {
 
 ${YELLOW}Automated download failed. Please download manually:${NC}
 
-1. Visit: https://github.com/exomiser/Exomiser/discussions/categories/data-release
-2. Find the ${version} data release discussion
-3. Download: ${version}_${assembly}.zip
-4. Extract to: $RESOURCES_DIR/data/
-5. Verify files:
+Direct Download Links (Exomiser 2508):
+- hg19: https://g-879a9f.f5dc97.75bc.dn.glob.us/data/2508_hg19.zip
+- hg38: https://g-879a9f.f5dc97.75bc.dn.glob.us/data/2508_hg38.zip
+- phenotype: https://g-879a9f.f5dc97.75bc.dn.glob.us/data/2508_phenotype.zip
+
+Manual Steps:
+1. Download: ${version}_${assembly}.zip from the appropriate link above
+2. Extract to: $RESOURCES_DIR/data/
+3. Verify files:
    - ${version}_${assembly}_variants.mv.db
    - ${version}_${assembly}_clinvar.mv.db
+
+Alternative:
+1. Visit: https://github.com/exomiser/Exomiser/discussions/611
+2. Use direct links provided in the discussion
 
 Required files for LIRICAL genomic analysis:
 - ${version}_${assembly}_variants.mv.db  (variant annotations)

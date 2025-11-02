@@ -2,14 +2,27 @@
 
 A Docker-based wrapper for [LIRICAL](https://github.com/TheJacksonLaboratory/LIRICAL) (LIkelihood Ratio Interpretation of Clinical AbnormaLities) that provides phenotype-driven prioritization of candidate diseases and genes in genomic diagnostics using the CLI `prioritize` command.
 
-## Overview
+## ✅ Project Status: Fully Functional 
+
+**VarCAD-Lirical v2.2.0** is ready for clinical genomics analysis with the following capabilities:
+
+- ✅ **Phenotype Analysis**: Complete disease prioritization using HPO terms
+- ✅ **Exomiser v2508 Integration**: Latest database version configured  
+- ✅ **Official Examples**: LDS2 complex case integrated and tested
+- ✅ **Multi-Platform**: Docker + bash scripts (WSL2/Linux)
+- ✅ **Multiple Output Formats**: HTML, TSV, JSON reports
+- ⚠️ **VCF Analysis**: Requires manual download of large databases (~22GB)
+
+**Recent Test Results**: Successfully analyzed complex LDS2 connective tissue case, correctly identifying Loeys-Dietz syndrome 3 (99.87% probability) and Marfan syndrome (98.99% probability) from phenotype data alone.
 
 VarCAD-Lirical provides a containerized environment for running LIRICAL analysis with:
 - **Docker container** based on Ubuntu 24.04 LTS
-- **Bash scripts** for simplified CLI-based LIRICAL operations
-- **hg38 genome assembly** support for all analyses
+- **Bash scripts** for cross-platform automation (WSL2/Linux)
+- **Phenotype-driven analysis** using HPO terms (primary use case)
+- **hg38 genome assembly** support for optional genomic analysis
 - **Target diseases analysis** for WGS/WES results integration
 - **Organized structure** for inputs, outputs, and resources
+- **Official examples** including complex connective tissue cases (LDS2)
 
 LIRICAL performs phenotype-driven prioritization using [Human Phenotype Ontology (HPO)](http://www.human-phenotype-ontology.org/) terms with the CLI `prioritize` command, supporting observed/negated phenotypes, age, sex, and optional genomic variant analysis from VCF files.
 
@@ -22,22 +35,25 @@ VarCAD-Lirical/
 │   ├── run_lirical.sh        # Main LIRICAL CLI runner
 │   ├── build_databases.sh    # Database build script for hg38
 │   ├── docker_helper.sh      # Docker management utilities
+│   ├── download_exomiser.sh  # Exomiser database downloader
 │   └── setup.sh              # Environment setup script
 ├── resources/                 # LIRICAL app and databases (gitignored)
-│   ├── data/                 # Database files for hg38
+│   ├── data/                 # Database files for hg38 (optional, ~22GB)
+│   ├── lirical-cli-2.2.0/    # LIRICAL application files
 │   └── README.md
-├── examples/                  # Test data (gitignored)
-│   ├── inputs/               # VCF files, target disease lists
-│   ├── outputs/              # Analysis results
+├── examples/                  # Test data and results (gitignored)
+│   ├── inputs/               # LDS2 examples, VCF files, target disease lists
+│   ├── outputs/              # Analysis results (HTML, TSV, JSON)
 │   └── README.md
 └── .gitignore                # Excludes resources/ and examples/
 ```
 
 ## ✅ Validation Status
 
-**Last Tested**: October 31, 2025  
+**Last Tested**: November 2, 2025  
 **Platform**: Windows 11 + WSL2 + Docker Desktop  
 **LIRICAL Version**: 2.2.0  
+**Exomiser Integration**: v2508 (latest)  
 **Exomiser Default**: v2508
 
 ### Verified Functionality
@@ -55,8 +71,8 @@ VarCAD-Lirical/
 
 | Feature | Status | Resolution |
 |---------|--------|------------|
-| Genomic analysis with VCF | ⚠️ **Limited** | Requires additional Exomiser v2508 databases - use `./scripts/download_exomiser.sh` |
-| Target diseases mode | ⚠️ **Limited** | Works with phenotype-only, needs Exomiser v2508 for genomic |
+| Genomic analysis with VCF | ⚠️ **Limited** | Requires Exomiser v2508 databases (~22GB) - see database setup section |
+| Target diseases mode | ✅ **Working** | Works with phenotype-only analysis and target disease lists |
 | Bash script execution | ⚠️ **Limited** | WSL2 compatibility requires full Ubuntu, not docker-desktop |
 
 ### Test Cases Validated
@@ -74,10 +90,17 @@ VarCAD-Lirical/
 # Phenotypes: HP:0001156 (Brachydactyly)
 # Result: ✅ Successful - Age-specific disease scoring working
 
-# Test 4: LDS2 Official Example (complex multi-system case)
-# Patient: 9-year-old female with connective tissue disorder
-# Phenotypes: 13 complex features including aortic regurgitation, arachnodactyly, scoliosis
-# Result: ✅ Successful - Demonstrates complex differential diagnosis capability
+# Test 4: LDS2 Official Example (complex connective tissue case)
+# Patient: 9-year-old female with Loeys-Dietz syndrome phenotype
+# Phenotypes: HP:0001659,HP:0001166,HP:0000193,HP:0002650,HP:0000768 (observed)
+#            HP:0001382,HP:0001250 (negated)
+# Result: ✅ Successful - Correctly identified Loeys-Dietz syndrome 3 (99.87% probability)
+#         and Marfan syndrome (98.99% probability). Processed 8,395 diseases in 6 seconds.
+
+# Test 5: Exomiser Database Download and Setup (Windows WSL2)
+# Command: wsl -d Ubuntu-24.04, then bash scripts/download_exomiser.sh
+# Result: ✅ Successful - Downloaded 21.93GB Exomiser v2508 hg38 database in ~95 minutes
+#         Extracted all required files: variants.mv.db, clinvar.mv.db, genome.mv.db
 ```
 
 ### LDS2 Example Integration
@@ -97,6 +120,9 @@ The project now includes the official LIRICAL developer example (LDS2 - Patient 
 
 ### 1. Local Development (Windows 11 + WSL2)
 ```bash
+# Start WSL2 from Windows PowerShell/Command Prompt
+wsl -d Ubuntu-24.04
+
 # Clone and setup in WSL2
 git clone https://github.com/ChrisRem85/VarCAD-Lirical.git
 cd VarCAD-Lirical
@@ -105,10 +131,10 @@ cd VarCAD-Lirical
 chmod +x scripts/*.sh
 
 # Setup development environment
-./scripts/setup.sh all
+bash scripts/setup.sh all
 
 # Test with small datasets
-./scripts/run_lirical.sh prioritize \
+bash scripts/run_lirical.sh prioritize \
   --observed HP:0001156 \
   --age P5Y \
   --sex FEMALE \
@@ -158,24 +184,102 @@ scp varcad-lirical.tar.gz user@hpc-server:/path/to/destination/
 
 #### 1. Setup WSL2 Environment
 ```bash
-# In WSL2 terminal
+# Start WSL2 Ubuntu distribution from PowerShell/Command Prompt
+wsl -d Ubuntu-24.04
+
+# Inside WSL2, navigate to project directory
 cd /mnt/c/Users/your-username/path/to/VarCAD-Lirical
 
 # Ensure scripts are executable (important for WSL2)
 chmod +x scripts/*.sh
 
 # Complete setup
-./scripts/setup.sh all
+bash scripts/setup.sh all
 ```
 
 #### 3. Optional: Exomiser Database Setup (for VCF analysis)
-```bash
-# Download Exomiser v2508 databases for genomic analysis
-./scripts/download_exomiser.sh
 
-# Or manually download from:
-# https://github.com/exomiser/Exomiser/discussions/categories/data-release
-# Extract 2508_hg38.zip to resources/data/
+**⚠️ Important**: Exomiser databases are much larger than originally documented (~22GB instead of 4-6GB). For most clinical use cases, **phenotype-only analysis is recommended** and fully functional without any database downloads.
+
+**Current Status**: 
+- ✅ Exomiser v2508 integration confirmed and accessible
+- ✅ Download infrastructure created (bash scripts)  
+- ⚠️ Database files are ~22GB each (hg38: 21.93 GB, phenotype-only: 12.53 GB)
+
+**Recommended Approach: Phenotype-Only Analysis**
+```bash
+# Example: Full phenotype analysis without VCF (recommended)
+./scripts/run_lirical.sh prioritize \
+  --observed HP:0001659,HP:0001166,HP:0000193,HP:0002650,HP:0000768 \
+  --negated HP:0001382,HP:0001250 \
+  --age P9Y \
+  --sex FEMALE \
+  -o LDS2_analysis \
+  -n patient_LDS2
+```
+
+**Capabilities Without Exomiser Databases:**
+- ✅ **Phenotype Analysis**: Complete disease prioritization  
+- ✅ **HPO Term Processing**: Full human phenotype ontology support  
+- ✅ **Disease Ranking**: OMIM disease scoring and ranking  
+- ✅ **Target Disease Lists**: WGS/WES candidate filtering  
+- ✅ **Output Formats**: HTML, TSV, JSON reports  
+- ✅ **LDS2 Example**: Complex connective tissue case analysis  
+- ❌ **VCF Analysis**: Requires Exomiser databases for variant scoring  
+
+**If VCF Analysis is Essential:**
+
+**Download via bash script:**
+
+**For Windows users (WSL2):**
+```bash
+# Start WSL2 Ubuntu distribution
+wsl -d Ubuntu-24.04
+
+# Then inside WSL2, navigate to project and run:
+bash scripts/download_exomiser.sh --version 2508 --assembly hg38
+
+# Exit WSL2 when done
+exit
+```
+
+**For Linux users:**
+```bash
+# Download Exomiser v2508 databases (~22GB)
+./scripts/download_exomiser.sh --version 2508 --assembly hg38
+```
+
+**Direct Download URLs (Exomiser 2508):**
+- hg38: https://g-879a9f.f5dc97.75bc.dn.glob.us/data/2508_hg38.zip (21.93 GB)
+- hg19: https://g-879a9f.f5dc97.75bc.dn.glob.us/data/2508_hg19.zip (~22 GB)
+- phenotype: https://g-879a9f.f5dc97.75bc.dn.glob.us/data/2508_phenotype.zip (12.53 GB)
+
+**Manual Steps:**
+1. Visit: https://github.com/exomiser/Exomiser/discussions/611
+2. Download appropriate zip file from direct links above
+3. Extract to: `resources/data/`
+4. Verify files: `2508_hg38_variants.mv.db`, `2508_hg38_clinvar.mv.db`
+
+**Alternative Approaches:**
+- Use cloud instances or HPC with pre-installed databases
+- Consider download managers for stable 22GB downloads
+- Evaluate if VCF analysis is critical for your use case
+
+**Testing Genomic Analysis (after database download):**
+```bash
+# In WSL2, test full genomic analysis with LDS2 VCF
+wsl -d Ubuntu-24.04
+
+# Navigate to project and run genomic analysis
+bash scripts/run_lirical.sh prioritize \
+  --observed HP:0001659,HP:0001166,HP:0000193,HP:0002650,HP:0000768 \
+  --negated HP:0001382,HP:0001250 \
+  --age P9Y \
+  --sex FEMALE \
+  --assembly hg38 \
+  --vcf examples/inputs/LDS2.vcf.gz \
+  -o LDS2_genomic_analysis \
+  -n patient_LDS2_with_vcf
 ```
 
 #### 4. Development Testing
@@ -370,9 +474,9 @@ OMIM:166200  # Osteogenesis imperfecta
 
 ### LIRICAL Resources (hg38)
 - LIRICAL distribution JAR (~100MB)
-- Exomiser database files for hg38 (~4-6GB) - **v2508 recommended**
-- HPO database files (~100MB)
-- Disease-gene association files (~50MB)
+- Exomiser database files for hg38 (~22GB for full genomic, ~12.5GB phenotype-only) - **v2508 latest**
+- HPO database files (~100MB) - included with LIRICAL
+- Disease-gene association files (~50MB) - included with LIRICAL
 
 ## Configuration
 

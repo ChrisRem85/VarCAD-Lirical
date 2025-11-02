@@ -251,7 +251,8 @@ download_databases() {
     log_info "   - ${EXOMISER_DATA_VERSION}_hg38_variants.mv.db"
     log_info "   - ${EXOMISER_DATA_VERSION}_hg38_clinvar.mv.db"
     echo
-    log_info "Automated helper available: ./scripts/download_exomiser.sh"
+    log_info "Automated download helper:"
+    log_info "  Linux/WSL2: ./scripts/download_exomiser.sh"
     log_info "Alternative: Use phenotype-only analysis (no VCF required - fully supported)"
     echo
 }
