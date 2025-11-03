@@ -25,7 +25,13 @@ cd VarCAD-Lirical
 ./scripts/setup_lirical.sh all
 ```
 
-### 2. Run Analysis
+### 2. Test Installation
+```bash
+# Run comprehensive test suite
+./scripts/test_lirical.sh
+```
+
+### 3. Run Analysis
 ```bash
 # Basic phenotype analysis
 ./scripts/run_lirical.sh prioritize \
@@ -43,12 +49,6 @@ cd VarCAD-Lirical
 
 # View results
 open examples/outputs/basic_analysis/lirical.html
-```
-
-### 3. Test Installation
-```bash
-# Run comprehensive test suite
-./scripts/test_lirical.sh
 ```
 
 ## Project Structure
