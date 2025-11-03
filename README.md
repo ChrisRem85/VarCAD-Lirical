@@ -13,8 +13,6 @@ A Docker-based wrapper for [LIRICAL](https://github.com/TheJacksonLaboratory/LIR
 - ✅ **Multiple Output Formats**: HTML, TSV, JSON reports
 - ⚠️ **Database Downloads**: VCF analysis requires large databases (~22GB)
 
-**Recent Test Results**: Successfully analyzed complex LDS2 connective tissue case, correctly identifying Loeys-Dietz syndrome 3 (99.87% probability) and Marfan syndrome (98.99% probability) from phenotype data alone.
-
 ## Quick Start
 
 ### 1. Setup Environment
