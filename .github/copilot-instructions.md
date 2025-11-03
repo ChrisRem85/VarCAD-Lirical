@@ -16,10 +16,10 @@ VarCAD-Lirical is a containerized wrapper for [LIRICAL](https://github.com/TheJa
 
 ### Key Components
 - `Dockerfile` - Ubuntu 24.04 + Java 17 + LIRICAL setup
-- `scripts/run_lirical.sh` - Main analysis runner (CLI prioritize command)
+- `scripts/run_lirical.sh` - Main analysis runner with `--docker` flag support
 - `scripts/build_databases.sh` - Database build script for hg38
-- `scripts/docker_helper.sh` - Docker container management
-- `scripts/setup.sh` - Environment and database setup
+- `scripts/setup_lirical.sh` - Environment setup and Docker management
+- `scripts/test_lirical.sh` - Comprehensive test suite with Docker tests
 - `resources/` - LIRICAL JAR and databases (gitignored, ~4-6GB for hg38)
 - `examples/inputs/` - Test data (VCF files, target disease lists, gitignored)
 - `examples/outputs/` - Analysis results (HTML/TSV/JSON, gitignored)
@@ -40,9 +40,10 @@ VarCAD-Lirical is a containerized wrapper for [LIRICAL](https://github.com/TheJa
 - Documentation updates go in `README.md` with proper examples
 
 ### Docker Workflow
-1. Resources must be populated before building: `./scripts/setup.sh download`
-2. Build image: `./scripts/docker_helper.sh build`
-3. Run analysis: `./scripts/docker_helper.sh run [LIRICAL_COMMAND]`
+1. Resources must be populated before building: `./scripts/setup_lirical.sh download`
+2. Build image: `./scripts/setup_lirical.sh docker-build`
+3. Run analysis: `./scripts/run_lirical.sh --docker [LIRICAL_COMMAND]`
+4. Container management: `./scripts/setup_lirical.sh docker-status|docker-logs|docker-clean`
 
 ### Cross-Platform Development
 - **Development**: Windows 11 with WSL2 and Docker Desktop
@@ -89,7 +90,7 @@ VarCAD-Lirical is a containerized wrapper for [LIRICAL](https://github.com/TheJa
 ### Critical Commands
 ```bash
 # Setup everything for hg38
-./scripts/setup.sh all
+./scripts/setup_lirical.sh all
 
 # Basic phenotype analysis
 ./scripts/run_lirical.sh prioritize --observed HP:0001156,HP:0001382 --age P5Y --sex FEMALE -o analysis1 -n patient1
@@ -98,13 +99,13 @@ VarCAD-Lirical is a containerized wrapper for [LIRICAL](https://github.com/TheJa
 ./scripts/run_lirical.sh target-diseases --target-diseases diseases.txt --vcf variants.vcf --observed HP:0001156 -o genomic_analysis -n patient2
 
 # Docker equivalent
-./scripts/docker_helper.sh run prioritize --observed HP:0001156 -o test -n test
+./scripts/run_lirical.sh --docker prioritize --observed HP:0001156 -o test -n test
 ```
 
 ## Testing and Validation
 
 ### Before Committing Changes
-1. Test script execution: `./scripts/setup.sh examples && ./scripts/run_lirical.sh help`
+1. Test script execution: `./scripts/setup_lirical.sh examples && ./scripts/run_lirical.sh help`
 2. Verify Docker build: `./scripts/docker_helper.sh build`
 3. Run example analysis: `./scripts/run_lirical.sh prioritize --observed HP:0001156 -o test -n test`
 4. Check all scripts have executable permissions

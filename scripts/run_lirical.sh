@@ -51,6 +51,57 @@ log_success() {
     echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
+# Docker utility functions
+check_docker() {
+    if ! command -v docker &> /dev/null; then
+        log_error "Docker is not installed or not in PATH"
+        log_error "Please install Docker to use --docker flag"
+        exit 1
+    fi
+    
+    if ! docker ps &> /dev/null; then
+        log_error "Docker daemon is not running or not accessible"
+        log_error "Please start Docker daemon or check Docker permissions"
+        exit 1
+    fi
+}
+
+build_docker_image() {
+    local image_name="varcad-lirical:latest"
+    
+    log_info "Building Docker image: $image_name"
+    if docker build -t "$image_name" "$APP_DIR"; then
+        log_success "Docker image built successfully: $image_name"
+        return 0
+    else
+        log_error "Failed to build Docker image"
+        return 1
+    fi
+}
+
+run_docker_command() {
+    local image_name="varcad-lirical:latest"
+    local cmd_args=("$@")
+    
+    # Check if image exists, build if not
+    if ! docker image inspect "$image_name" &> /dev/null; then
+        log_info "Docker image not found, building..."
+        if ! build_docker_image; then
+            exit 1
+        fi
+    fi
+    
+    # Prepare Docker run command
+    local docker_cmd=(docker run --rm)
+    docker_cmd+=(-v "$APP_DIR/examples/inputs:/app/examples/inputs:ro")
+    docker_cmd+=(-v "$APP_DIR/examples/outputs:/app/examples/outputs")
+    docker_cmd+=("$image_name")
+    docker_cmd+=("${cmd_args[@]}")
+    
+    log_info "Running Docker command: ${docker_cmd[*]}"
+    "${docker_cmd[@]}"
+}
+
 # Function to check if LIRICAL is properly installed
 check_lirical_installation() {
     if [[ ! -f "$LIRICAL_JAR" ]]; then
@@ -80,6 +131,9 @@ Commands:
     setup             Setup LIRICAL resources and databases
     help              Show this help message
 
+Global Options:
+    --docker              Run analysis in Docker container (alternative to direct execution)
+
 Prioritize Options:
     -o, --output          Output directory (relative to examples/outputs/)
     -n, --name            Analysis name (used for output file naming)
@@ -88,8 +142,8 @@ Prioritize Options:
     --age                 Patient age (e.g., P2Y6M for 2 years 6 months, or adult/child)
     --sex                 Patient sex (MALE/FEMALE/UNKNOWN)
     --data-dir            Path to LIRICAL data directory (default: resources/data)
-    --vcf                 VCF file for genomic analysis (optional)
-    --assembly            Genome assembly (default: hg38)
+    --vcf                 VCF file for genomic analysis (optional, auto-detects Exomiser databases)
+    --assembly            Genome assembly (default: hg38, must match VCF file assembly)
 
 Target Diseases Options:
     --target-diseases     File with target disease list from WGS/WES analysis
@@ -135,6 +189,64 @@ validate_hpo_terms() {
             exit 1
         fi
     done
+}
+
+# Function to detect and configure Exomiser databases for VCF analysis
+configure_exomiser_databases() {
+    local assembly="$1"
+    local cmd_array_name="$2"  # Name of the array to modify
+    local -n cmd_ref=$cmd_array_name  # Reference to the command array
+    
+    # Define potential Exomiser database directories
+    local exomiser_dirs=(
+        "$RESOURCES_DIR/exomiser_db/${EXOMISER_DATA_VERSION}_${assembly}"
+        "$RESOURCES_DIR/exomiser_db/${assembly}"
+        "$RESOURCES_DIR/data/${EXOMISER_DATA_VERSION}_${assembly}"  # Check for databases in data directory
+        "$RESOURCES_DIR/data"  # Check if databases are co-located with LIRICAL data
+    )
+    
+    local exomiser_dir=""
+    local assembly_upper=$(echo "$assembly" | tr '[:lower:]' '[:upper:]')
+    
+    # Try to find Exomiser databases
+    for dir in "${exomiser_dirs[@]}"; do
+        if [[ -d "$dir" ]]; then
+            # Check for required Exomiser database files
+            local variants_db="${dir}/${EXOMISER_DATA_VERSION}_${assembly}_variants.mv.db"
+            local clinvar_db="${dir}/${EXOMISER_DATA_VERSION}_${assembly}_clinvar.mv.db"
+            
+            if [[ -f "$variants_db" && -f "$clinvar_db" ]]; then
+                exomiser_dir="$dir"
+                log_info "Found Exomiser ${assembly_upper} databases in: $exomiser_dir"
+                break
+            fi
+        fi
+    done
+    
+    # Add Exomiser parameters if databases found
+    if [[ -n "$exomiser_dir" ]]; then
+        case "$assembly" in
+            "hg19")
+                cmd_ref+=(-ed19 "$exomiser_dir")
+                log_info "Added Exomiser hg19 database directory: $exomiser_dir"
+                ;;
+            "hg38")
+                cmd_ref+=(-ed38 "$exomiser_dir")
+                log_info "Added Exomiser hg38 database directory: $exomiser_dir"
+                ;;
+            *)
+                log_warn "Unknown assembly: $assembly. Skipping Exomiser database configuration."
+                ;;
+        esac
+        return 0
+    else
+        log_warn "Exomiser databases not found for $assembly_upper assembly"
+        log_warn "VCF analysis will fall back to phenotype-only mode"
+        log_warn "To enable genomic analysis, download Exomiser databases:"
+        log_warn "  For automated download: ./scripts/download_ExomiserDatabase.sh"
+        log_warn "  Manual download from: https://github.com/exomiser/Exomiser/discussions/categories/data-release"
+        return 1
+    fi
 }
 
 # Function to run LIRICAL prioritize analysis
@@ -198,6 +310,12 @@ run_prioritize_analysis() {
         local vcf_path="$INPUTS_DIR/$vcf_file"
         if [[ -f "$vcf_path" ]]; then
             cmd+=(--vcf "$vcf_path")
+            
+            # Add assembly parameter for VCF analysis
+            cmd+=(--assembly "$assembly")
+            
+            # Configure Exomiser databases for genomic analysis
+            configure_exomiser_databases "$assembly" cmd
         else
             log_warn "VCF file not found: $vcf_path. Continuing without genomic analysis."
         fi
@@ -276,6 +394,10 @@ run_target_diseases_analysis() {
     cmd+=(--output-directory "$output_path")
     cmd+=(--assembly "$assembly")
     cmd+=(--vcf "$vcf_path")
+    
+    # Configure Exomiser databases for genomic analysis
+    configure_exomiser_databases "$assembly" cmd
+    
     cmd+=(--target-diseases "$target_diseases_path")
     
     # Add observed phenotypes if provided
@@ -427,6 +549,33 @@ setup_lirical() {
 
 # Main function
 main() {
+    # Check for --docker flag first
+    local use_docker=false
+    local args=()
+    
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --docker)
+                use_docker=true
+                shift
+                ;;
+            *)
+                args+=("$1")
+                shift
+                ;;
+        esac
+    done
+    
+    # If using Docker, delegate to Docker execution
+    if [[ "$use_docker" == true ]]; then
+        check_docker
+        run_docker_command "${args[@]}"
+        return $?
+    fi
+    
+    # Restore arguments for normal execution
+    set -- "${args[@]}"
+    
     # Check if no arguments provided
     if [[ $# -eq 0 ]]; then
         show_usage

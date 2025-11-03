@@ -15,8 +15,9 @@ EXAMPLES_DIR="$APP_DIR/examples"
 LIRICAL_LATEST_RELEASE="v2.2.0"
 LIRICAL_DOWNLOAD_URL="https://github.com/TheJacksonLaboratory/LIRICAL/releases/download"
 
-# Exomiser configuration - default to latest recommended version
+# Exomiser configuration
 EXOMISER_DATA_VERSION="${EXOMISER_DATA_VERSION:-2508}"
+EXOMISER_BASE_URL="https://g-879a9f.f5dc97.75bc.dn.glob.us/data"
 
 # Colors for output
 RED='\033[0;31m'
@@ -50,24 +51,34 @@ VarCAD-Lirical Setup Script
 Usage: $0 [COMMAND] [OPTIONS]
 
 Commands:
-    all           Complete setup (download LIRICAL, setup directories, download databases)
-    download      Download LIRICAL distribution
-    directories   Create required directories
-    databases     Download LIRICAL databases (Exomiser v2508 compatible)
-    examples      Create example files
-    docker        Build Docker image
-    help          Show this help message
+    all               Complete setup (download LIRICAL, setup directories, download databases)
+    download          Download LIRICAL distribution
+    directories       Create required directories
+    databases         Download LIRICAL core databases (HPO, phenotypes, transcripts)
+    exomiser          Download Exomiser databases for VCF analysis (hg19/hg38)
+    examples          Create example files
+    docker            Build Docker image
+    docker-clean      Clean up Docker containers and images
+    docker-status     Show Docker container and image status
+    docker-logs       Show Docker container logs
+    help              Show this help message
 
 Options:
-    --version VER    LIRICAL version to download (default: $LIRICAL_LATEST_RELEASE)
-    --force          Force overwrite existing files
+    --version VER     LIRICAL version to download (default: $LIRICAL_LATEST_RELEASE)
+    --exomiser-version VER    Exomiser data version (default: $EXOMISER_DATA_VERSION)
+    --assembly ASM    Genome assembly for Exomiser (hg19|hg38|both, default: hg38)
+    --force           Force overwrite existing files
 
 Environment Variables:
     EXOMISER_DATA_VERSION    Exomiser data release version (default: 2508)
 
 Examples:
-    $0 all
+    $0 all                                    # Complete setup with hg38 Exomiser
+    $0 all --assembly both                    # Complete setup with both hg19 and hg38
     $0 download --version v2.2.0
+    $0 databases                              # Download LIRICAL core databases only
+    $0 exomiser --assembly hg19               # Download hg19 Exomiser databases
+    $0 exomiser --assembly both               # Download both hg19 and hg38 Exomiser
     $0 examples
     $0 docker
 
@@ -189,7 +200,123 @@ download_lirical() {
     fi
 }
 
-# Function to download databases
+# Function to download Exomiser databases
+download_exomiser_databases() {
+    local version="$1"
+    local assembly="$2"
+    local data_dir="$3"
+    local force="${4:-false}"
+    
+    log_info "Downloading Exomiser databases..."
+    log_info "Version: $version"
+    log_info "Assembly: $assembly"
+    log_info "Target directory: $data_dir"
+    
+    # Check if already extracted
+    local extract_dir="$data_dir/${version}_${assembly}"
+    if [[ -d "$extract_dir" && "$force" != "true" ]]; then
+        log_warn "Exomiser $assembly database already exists: $extract_dir"
+        log_info "Use --force to re-download"
+        return 0
+    fi
+    
+    mkdir -p "$data_dir"
+    
+    local filename="${version}_${assembly}.zip"
+    local download_url="$EXOMISER_BASE_URL/$filename"
+    local target_file="$data_dir/$filename"
+    
+    log_info "Download URL: $download_url"
+    log_warn "This download is ~22GB and may take significant time"
+    
+    # Try to download
+    if command -v wget &> /dev/null; then
+        log_info "Downloading with wget..."
+        if wget -O "$target_file" "$download_url"; then
+            log_success "Download completed: $target_file"
+        else
+            log_error "Download failed with wget"
+            return 1
+        fi
+    elif command -v curl &> /dev/null; then
+        log_info "Downloading with curl..."
+        if curl -L -o "$target_file" "$download_url"; then
+            log_success "Download completed: $target_file"
+        else
+            log_error "Download failed with curl"
+            return 1
+        fi
+    else
+        log_error "Neither wget nor curl is available"
+        return 1
+    fi
+    
+    # Extract the archive
+    log_info "Extracting database files..."
+    if unzip -q "$target_file" -d "$data_dir"; then
+        log_success "Extraction completed"
+        
+        # List extracted files
+        log_info "Extracted files:"
+        find "$data_dir" -name "*${version}*" -type f | head -10
+        
+        # Clean up zip file
+        rm "$target_file"
+        log_info "Removed temporary archive: $target_file"
+        
+        return 0
+    else
+        log_error "Extraction failed"
+        return 1
+    fi
+}
+
+# Function to setup Exomiser databases
+setup_exomiser() {
+    local version="${1:-$EXOMISER_DATA_VERSION}"
+    local assembly="${2:-hg38}"
+    local force="${3:-false}"
+    
+    log_info "Setting up Exomiser databases..."
+    
+    local exomiser_dir="$RESOURCES_DIR/exomiser_db"
+    
+    if [[ "$assembly" == "both" ]]; then
+        log_info "Downloading both hg19 and hg38 assemblies..."
+        
+        # Download hg38
+        if download_exomiser_databases "$version" "hg38" "$exomiser_dir" "$force"; then
+            log_success "hg38 Exomiser databases downloaded successfully"
+        else
+            log_error "Failed to download hg38 Exomiser databases"
+            return 1
+        fi
+        
+        # Download hg19
+        if download_exomiser_databases "$version" "hg19" "$exomiser_dir" "$force"; then
+            log_success "hg19 Exomiser databases downloaded successfully"
+        else
+            log_error "Failed to download hg19 Exomiser databases"
+            return 1
+        fi
+    else
+        # Download single assembly
+        if download_exomiser_databases "$version" "$assembly" "$exomiser_dir" "$force"; then
+            log_success "Exomiser $assembly databases downloaded successfully"
+        else
+            log_error "Failed to download Exomiser $assembly databases"
+            return 1
+        fi
+    fi
+    
+    log_success "Exomiser database setup completed successfully!"
+    
+    echo
+    log_info "You can now run genomic analysis with VCF files using:"
+    log_info "  --assembly $assembly"
+    log_info "  --vcf your_variants.vcf"
+}
+
 download_databases() {
     log_info "Setting up LIRICAL databases..."
     
@@ -252,7 +379,7 @@ download_databases() {
     log_info "   - ${EXOMISER_DATA_VERSION}_hg38_clinvar.mv.db"
     echo
     log_info "Automated download helper:"
-    log_info "  Linux/WSL2: ./scripts/download_exomiser.sh"
+    log_info "  Linux/WSL2: ./scripts/download_ExomiserDatabase.sh"
     log_info "Alternative: Use phenotype-only analysis (no VCF required - fully supported)"
     echo
 }
@@ -335,7 +462,7 @@ echo
 
 echo -e "${GREEN}Setup Commands:${NC}"
 echo "# Download and setup LIRICAL"
-echo "./scripts/setup.sh all"
+echo "./scripts/setup_lirical.sh all"
 echo
 echo "# Build databases for hg38"
 echo "./scripts/build_databases.sh"
@@ -463,24 +590,130 @@ build_docker() {
     fi
 }
 
+# Function to clean up Docker containers and images
+clean_docker() {
+    log_info "Cleaning up Docker containers and images..."
+    
+    # Check if Docker is available
+    if ! command -v docker &>/dev/null; then
+        log_error "Docker not found. Please install Docker and try again"
+        exit 1
+    fi
+    
+    local container_name="varcad-lirical-container"
+    local image_name="varcad-lirical"
+    
+    # Stop and remove container if exists
+    if docker ps -aq -f name="$container_name" | grep -q .; then
+        log_info "Removing container: $container_name"
+        docker rm -f "$container_name" &>/dev/null || true
+        log_success "Container removed"
+    else
+        log_info "No container named $container_name found"
+    fi
+    
+    # Remove image if exists
+    if docker image inspect "$image_name:latest" &>/dev/null; then
+        log_info "Removing image: $image_name:latest"
+        docker rmi "$image_name:latest" &>/dev/null || true
+        log_success "Image removed"
+    else
+        log_info "No image named $image_name:latest found"
+    fi
+    
+    # Prune unused Docker resources
+    log_info "Pruning unused Docker resources..."
+    docker system prune -f &>/dev/null || true
+    
+    log_success "Docker cleanup completed"
+}
+
+# Function to show Docker status
+status_docker() {
+    log_info "Docker Status Information"
+    
+    # Check if Docker is available
+    if ! command -v docker &>/dev/null; then
+        log_error "Docker not found"
+        return 1
+    fi
+    
+    local container_name="varcad-lirical-container"
+    local image_name="varcad-lirical"
+    
+    echo
+    log_info "Container Status:"
+    if docker ps -q -f name="$container_name" | grep -q .; then
+        echo -e "${GREEN}RUNNING${NC}"
+        docker ps -f name="$container_name"
+    elif docker ps -aq -f name="$container_name" | grep -q .; then
+        echo -e "${YELLOW}STOPPED${NC}"
+        docker ps -a -f name="$container_name"
+    else
+        echo -e "${RED}NOT FOUND${NC}"
+    fi
+    
+    echo
+    log_info "Image Status:"
+    if docker image inspect "$image_name:latest" &>/dev/null; then
+        echo -e "${GREEN}EXISTS${NC}"
+        docker images "$image_name"
+    else
+        echo -e "${RED}NOT FOUND${NC}"
+    fi
+}
+
+# Function to show Docker logs
+logs_docker() {
+    log_info "Docker Container Logs"
+    
+    # Check if Docker is available
+    if ! command -v docker &>/dev/null; then
+        log_error "Docker not found"
+        return 1
+    fi
+    
+    local container_name="varcad-lirical-container"
+    
+    if docker ps -aq -f name="$container_name" | grep -q .; then
+        docker logs "$container_name"
+    else
+        log_warn "Container $container_name does not exist"
+    fi
+}
+
 # Function to run complete setup
 complete_setup() {
     local version="${1:-$LIRICAL_LATEST_RELEASE}"
     local force="${2:-false}"
+    local assembly="${3:-hg38}"
     
     log_info "Running complete VarCAD-Lirical setup..."
+    log_info "LIRICAL version: $version"
+    log_info "Exomiser assembly: $assembly"
     
     check_prerequisites
     create_directories
     download_lirical "$version" "$force"
     download_databases
+    
+    # Download Exomiser databases if requested
+    if [[ "$assembly" != "none" ]]; then
+        setup_exomiser "$EXOMISER_DATA_VERSION" "$assembly" "$force"
+    fi
+    
     create_examples
     
     log_success "Complete setup finished successfully!"
     log_info "You can now:"
-    log_info "1. Run analysis: ./scripts/run_lirical.sh phenopacket -i example_phenopacket.json -o test_output -n test"
-    log_info "2. Build Docker image: ./scripts/setup.sh docker"
-    log_info "3. Use Docker: ./scripts/docker_helper.sh run phenopacket -i example_phenopacket.json -o test_output"
+    log_info "1. Run phenotype analysis: ./scripts/run_lirical.sh prioritize --observed HP:0001156 -o test -n patient"
+    
+    if [[ "$assembly" != "none" ]]; then
+        log_info "2. Run VCF analysis: ./scripts/run_lirical.sh prioritize --observed HP:0001156 --vcf file.vcf --assembly $assembly -o test -n patient"
+    fi
+    
+    log_info "3. Build Docker image: ./scripts/setup_lirical.sh docker"
+    log_info "4. Use Docker: ./scripts/docker_helper.sh run prioritize --observed HP:0001156 -o test -n patient"
 }
 
 # Main function
@@ -494,6 +727,8 @@ main() {
     shift
     
     local version="$LIRICAL_LATEST_RELEASE"
+    local exomiser_version="$EXOMISER_DATA_VERSION"
+    local assembly="hg38"
     local force="false"
     
     # Parse options
@@ -501,6 +736,14 @@ main() {
         case "$1" in
             --version)
                 version="$2"
+                shift 2
+                ;;
+            --exomiser-version)
+                exomiser_version="$2"
+                shift 2
+                ;;
+            --assembly)
+                assembly="$2"
                 shift 2
                 ;;
             --force)
@@ -513,9 +756,12 @@ main() {
         esac
     done
     
+    # Set Exomiser version for functions
+    EXOMISER_DATA_VERSION="$exomiser_version"
+    
     case "$command" in
         "all")
-            complete_setup "$version" "$force"
+            complete_setup "$version" "$force" "$assembly"
             ;;
         "download")
             check_prerequisites
@@ -528,12 +774,24 @@ main() {
         "databases")
             download_databases
             ;;
+        "exomiser")
+            setup_exomiser "$exomiser_version" "$assembly" "$force"
+            ;;
         "examples")
             create_directories
             create_examples
             ;;
         "docker")
             build_docker
+            ;;
+        "docker-clean")
+            clean_docker
+            ;;
+        "docker-status")
+            status_docker
+            ;;
+        "docker-logs")
+            logs_docker
             ;;
         "help"|"--help"|"-h")
             show_usage
